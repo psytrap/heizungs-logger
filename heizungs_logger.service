@@ -1,0 +1,19 @@
+[Unit]
+Description = Heizungslogger
+After = network.target
+# Assuming you want to start after network interfaces are made available
+ 
+[Service]
+Type = simple
+ExecStart = python3 /home/ubuntu/heizungs_logger/heizungs_logger.py --port /dev/ttyUSB0 --log_directory /home/ubuntu/heizungs_logger_logs
+User = ubuntu
+Group = ubuntu
+Restart = on-failure
+# Restart when there are errors
+SyslogIdentifier = heizungs_logger.py
+RestartSec = 5
+TimeoutStartSec = infinity
+ 
+[Install]
+WantedBy = multi-user.target
+# Make it accessible to other users
