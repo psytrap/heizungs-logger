@@ -6,6 +6,8 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+#include "firmware/frame.h"
+
 
 uint8_t FIRST_ONE_WIRE_BUS = 2;
 uint8_t ONE_WIRE_PINS = 4;
@@ -51,24 +53,9 @@ void loop() {
     inputs[offset] = inputState == HIGH;
   }
 
-  Serial.print("Temp");
-  for(auto temp : temps)
-  {
-    Serial.print(" " + String(temp));
-
-  }
-  Serial.print(" Input");
-  for(auto input : inputs)
-  {
-    if(input == true)
-    {
-      Serial.print(" on");
-    } else {
-      Serial.print(" off");
-    }
-  }
-
-  Serial.println();
+  char frame[128];
+  hlog::formatFrame(frame, sizeof(frame), temps, ONE_WIRE_PINS, inputs, INPUT_PINS, 1);
+  Serial.print(frame);
   digitalWrite(HEARTBEAT_PIN, LOW);
 
   // reset

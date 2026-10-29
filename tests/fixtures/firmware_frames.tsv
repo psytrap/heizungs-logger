@@ -1,0 +1,15 @@
+# Canonical firmware frames, shared by the C++ formatter test and the Python
+# parser test so both ends of the wire agree.
+#
+# Columns (tab separated, lines starting with '#' ignored):
+#   id <TAB> decimals <TAB> temps (comma separated) <TAB> inputs (comma separated) <TAB> expected frame
+# The expected frame uses the two literal characters \n for the trailing newline.
+# Avoid exact half-way values (22.25 at one decimal): dtostrf rounds half away
+# from zero while snprintf rounds half to even, so such a value would differ
+# between the AVR and host builds.
+v1a-typical	1	21.5,22.3,23.0,24.5	on,off	Temp 21.5 22.3 23.0 24.5 Input on off\n
+v1a-disconnected	1	-127.0,85.0,-127.0,0.0	off,off	Temp -127.0 85.0 -127.0 0.0 Input off off\n
+v1a-two-decimals	2	21.5,22.25,23.0,24.5	on,on	Temp 21.50 22.25 23.00 24.50 Input on on\n
+v1b-typical	1	29.7,28.4,33.0,29.3,29.3,15.3	off,off	Temp 29.7 28.4 33.0 29.3 29.3 15.3 Input off off\n
+v1b-negatives	1	-10.2,0.0,-0.5,100.0,12.0,7.5	on,on	Temp -10.2 0.0 -0.5 100.0 12.0 7.5 Input on on\n
+v1b-two-decimals	2	21.5,22.25,23.0,24.5,25.0,26.0	on,off	Temp 21.50 22.25 23.00 24.50 25.00 26.00 Input on off\n
