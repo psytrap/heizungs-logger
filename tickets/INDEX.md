@@ -21,7 +21,8 @@ Tickets are listed as one flat list, ordered by priority (**P0** → **High** �
 
 | Ticket | Title | Priority | Scope & Deliverables |
 | :---: | :--- | :---: | :--- |
-| _none_ | – | – | – |
+| [**T-003**](open/T-003-reevaluate-systemd-unit.md) | Re-evaluate the systemd Unit File | 🔵 **Normal** | Review of `heizungs_logger.service`: interpreter and entry point, restart and start-limit behaviour, `TimeoutStartSec`, watchdog option, journal policy, hardening trade-offs, deployed-vs-repo drift, proposed unit |
+| [**T-004**](open/T-004-firmware-test-strategy.md) | Testing Strategy for the Arduino Firmware (`heizungs_logger.ino`) | 🔵 **Normal** | Testability of the sketch: build verification, host-side frame/format tests with fake sensors, cross-language protocol fixtures, disconnected-sensor behaviour, documented manual hardware checklist |
 
 ---
 
