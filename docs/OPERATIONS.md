@@ -52,3 +52,26 @@ journalctl -u heizungs_logger.service --since "1 hour ago" | grep -i "traceback\
 - **No watchdog.** `WatchdogUSec=0`: the unit supervises process exit only. A wedged process that still holds the serial port is not detected. Enabling this needs `sd_notify` support in the application, so it is out of scope for the unit file alone.
 - **No device ordering.** The unit does not wait for `dev-ttyUSB0.device`; the restart loop covers enumeration delays instead. Re-enumeration to a different device name is an application-level concern.
 - **Log retention.** `StandardOutput=journal` uses journald defaults; the JSONL files under the log directory are not rotated by the unit.
+
+---
+
+## 6. 🚦 Failure behaviour
+
+The loop distinguishes three kinds of fault, deliberately:
+
+| Fault | Behaviour | Cost |
+| :--- | :--- | :--- |
+| **Display** (no LCD at 0x21, I2C error) | The record is written *before* the display update, so nothing is lost. One journal line `display unavailable: ...; continuing without it`, repeats are counted silently, the handle is dropped and reconnected on the next cycle, and recovery is logged as `display recovered after N failed update(s)`. | None. The LCD stays dark or stale until the fault clears. |
+| **Frame** (empty read, undecodable bytes) | Rejected: no record, one `rejected frame (empty|undecodable): ...` line, and the 20 s cadence is preserved. This follows the reader contract in [`RECORDING.md`](RECORDING.md) §4. | One missing sample. |
+| **Transport** (port open/write/read error) | Propagates out of the loop, the process exits and systemd restarts it after `RestartSec`. That restart is the *only* reconnect mechanism, so it is intentional. | One or two samples, plus a 3 s startup delay. |
+
+Additional notes:
+
+- **Late cycle:** if a cycle overruns its 20 s budget the remaining wait is clamped to zero instead of raising `ValueError`.
+- **Missing sensor:** the firmware emits `-127.0` (`DEVICE_DISCONNECTED_C`) or `85.0` (power-on value); those are recorded verbatim. Nothing raises an alarm, so check the values, not the service state.
+- **Repeated transport failures** show up as a restart loop (`systemctl show -p NRestarts`) in the journal. The unit hardcodes `/dev/ttyUSB0`, so a device that re-enumerates as `ttyUSB1` is not followed.
+
+```sh
+journalctl -u heizungs_logger.service --since "1 hour ago" | grep -E "display|rejected frame"
+systemctl show heizungs_logger.service -p NRestarts
+```

@@ -59,6 +59,14 @@ class LcdDisplay:
         self._lcd.clear()
         self._lcd.color = list(self.color)
 
+    def close(self) -> None:
+        """Forget the handle so the next ``show`` reconnects.
+
+        The runner calls this after a failed update; the I2C object cannot be
+        relied on once a write raised.
+        """
+        self._lcd = None
+
     def show(self, fields: list[str]) -> None:
         """Write ``fields`` to the display, one cell at a time."""
         if self._lcd is None:
