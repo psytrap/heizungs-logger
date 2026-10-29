@@ -11,6 +11,7 @@ This document is the historical register of all completed and verified tickets. 
 
 | Ticket | Title | Priority | Completed | Summary |
 | :---: | :--- | :---: | :---: | :--- |
+| [**T-006**](done/T-006-cycle-fault-isolation.md) | Isolate Display and Frame Faults from the Acquisition Loop | 🟠 **High** | 2026-10-29 | Record written before the LCD update; display faults degrade instead of restarting; empty/undecodable frames rejected with cadence kept; negative waits clamped; transport errors still restart on purpose |
 | [**T-005**](done/T-005-lcd-legacy-layout.md) | Restore the Legacy LCD Layout for Six-Temperature Frames | 🟠 **High** | 2026-10-29 | `DEFAULT_LAYOUT` back to the deployed cells (`0,5,10`; temperatures 1–3 / 4–6); tests pinned to a live v1b frame and to the `Input`-marker misfire |
 | [**T-004**](done/T-004-firmware-test-strategy.md) | Testing Strategy for the Arduino Firmware (`heizungs_logger.ino`) | 🔵 **Normal** | 2026-10-29 | `firmware/frame.{h,cpp}` extracted; `g++` host test; fixtures shared with `parse_frame`; recorded that the checked-in sketch emits v1a while the live board emits six temperatures |
 | [**T-003**](done/T-003-reevaluate-systemd-unit.md) | Re-evaluate the systemd Unit File | 🔵 **Normal** | 2026-10-29 | Unit rewritten (`Restart=always`, `RestartSec=10`, `StartLimitIntervalSec=0`, unbuffered stdout, three hardening directives, dead `TimeoutStartSec` removed); `scripts/install-service.sh`; `docs/OPERATIONS.md` |
