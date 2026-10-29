@@ -70,3 +70,7 @@ When dispatched to execute a ticket (or when synthesized by the coordinator):
 ## 4. 🎯 Backlog Ordering
 - **Rule:** Tickets carry no phase or tier label. The backlog is one flat list in `tickets/open/`, ordered by priority (`P0` → `High` → `Normal` → `Low`) and then ascending ticket number.
 - **Enforcement:** Do not introduce phase, tier, or milestone fields into ticket headers or index tables. Ordering is a reading aid, not a sequencing commitment.
+
+## 5. ✂️ Output Budget
+- **Rule:** Write in atomic units, one artefact per tool call, and keep chat narration to a single sentence per group.
+- **Enforcement:** See [`chunked-execution.md`](chunked-execution.md). Mandatory for models with a small `max_output_tokens` (the DeepSeek Flash profiles) and recommended for all others.
