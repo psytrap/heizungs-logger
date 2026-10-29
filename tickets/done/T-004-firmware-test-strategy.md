@@ -1,6 +1,6 @@
 # Ticket 004: Testing Strategy for the Arduino Firmware (`heizungs_logger.ino`)
 
-- **Status:** Backlog
+- **Status:** Done
 - **Priority:** Normal
 - **Scope & Relevant Files:**
   - `heizungs_logger.ino`
@@ -47,18 +47,61 @@ The chosen approach must not require the Pi to be touched, and must not change t
 
 ## Criteria
 
-- [ ] A written decision records which of the above directions are adopted and why the others are rejected.
-- [ ] Board FQBN, core version, and library versions are documented.
-- [ ] Frame formatting is exercisable without hardware (extracted function or equivalent), if that direction is adopted.
-- [ ] At least one automated test asserts the emitted frame shape against `heizungslogger.frame.parse_frame` and the documented 11-field contract.
-- [ ] Disconnected-sensor behaviour is covered by a test or explicitly documented as an accepted unknown.
-- [ ] Build verification runs as a single documented command and is added to the repository's quality gates (or the reason it cannot be is recorded).
-- [ ] The manual hardware procedure is documented and marked as requiring authorisation.
-- [ ] The wire format is unchanged; existing Python tests still parse the same frames.
-- [ ] `python -m pytest` passes.
-- [ ] Zero Ruff errors or warnings (`python -m ruff check .`).
+- [x] A written decision records which of the above directions are adopted and why the others are rejected.
+- [x] Board FQBN, core version, and library versions are documented.
+- [x] Frame formatting is exercisable without hardware (extracted function or equivalent), if that direction is adopted.
+- [x] At least one automated test asserts the emitted frame shape against `heizungslogger.frame.parse_frame` and the documented 11-field contract.
+- [x] Disconnected-sensor behaviour is covered by a test or explicitly documented as an accepted unknown.
+- [x] Build verification runs as a single documented command and is added to the repository's quality gates (or the reason it cannot be is recorded).
+- [x] The manual hardware procedure is documented and marked as requiring authorisation.
+- [x] The wire format is unchanged; existing Python tests still parse the same frames.
+- [x] `python -m pytest` passes.
+- [x] Zero Ruff errors or warnings (`python -m ruff check .`).
 
 ---
 
 ## Execution Notes
-<!-- Populated during Step 5 of the Ticket Protocol -->
+
+### The repository sketch is not the deployed firmware
+
+Before writing any harness the live device was inspected read-only. The newest record (2026-10-29) is:
+
+```text
+['Temp', '29.7', '28.4', '33.0', '29.3', '29.3', '15.3', 'Input', 'off', 'off', '2026-10-29T13:50:17.729536+01:00']
+```
+
+Six temperatures, one decimal. The checked-in sketch declares `ONE_WIRE_PINS = 4` and printed via `String(temp)`, which on AVR yields two decimals — i.e. it reproduces the v1a shape, not the eleven-field live shape. The deployed source is not on the Pi (`find ~ -name '*.ino'` finds nothing), so the exact revision cannot be recovered here. Consequence: the formatter takes temperature count and decimals as parameters, and `docs/FIRMWARE.md` §2 records the discrepancy as unresolved rather than guessing.
+
+### Implementation
+
+| File | Role |
+| :--- | :--- |
+| `firmware/frame.h`, `firmware/frame.cpp` | `hlog::formatFrame(out, cap, temps, nTemps, inputs, nInputs, decimals)` — bounded, NUL-terminating, emits the trailing `\n`; uses `dtostrf` under `ARDUINO`, `snprintf` on the host |
+| `heizungs_logger.ino` | printing block replaced by one `formatFrame` call; loop, pins and heartbeat untouched |
+| `tests/fixtures/firmware_frames.tsv` | six canonical frames: v1a/v1b, sentinels, negatives, one and two decimals |
+| `tests/firmware/frame_test.cpp` | host test: compiles the formatter, checks every fixture row, plus truncation and zero-capacity behaviour |
+| `tests/test_firmware_contract.py` | feeds the same frames through `parse_frame`; asserts round-trip and that widths are 9 or 11 fields |
+| `scripts/test-firmware.sh` | one command: `g++ -Wall -Wextra -Werror`, run, clean up; prints `skipped` (exit 0) where no compiler exists |
+| `docs/FIRMWARE.md` | wire format, discrepancy, decision record, provenance, test commands, manual hardware procedure |
+
+### Decision summary
+
+Adopted: pure formatter, host-side `g++` test, fixtures shared with Python. Rejected for now: fake `OneWire`/`DallasTemperature` shims (the loop is a straight pin scan; the contract lives in formatting). Not adopted: `arduino-cli` compile gate — no toolchain installed and the FQBN is unknown, so the extraction commands and the manual flash procedure are documented instead.
+
+### Things worth knowing
+
+- **Precision:** the sketch now formats with one decimal, matching the live device. This is an alignment with observed behaviour, not a format change; the `String(float)` default of two decimals was the outlier.
+- **Rounding:** `dtostrf` rounds half away from zero, `snprintf` rounds half to even, so fixtures must avoid exact halves at the chosen precision. Documented in `docs/FIRMWARE.md` §5.
+- **Sentinels:** `-127.0` and `85.0` pass through as ordinary fields and are asserted by both suites; nothing filters or annotates them.
+- **Unverified on hardware:** the sketch compiles against Arduino semantics by inspection only (no Arduino core available locally). `Serial.print(frame)` replaces `Serial.print`/`println` calls, so the emitted bytes are unchanged in length and content.
+
+### Gates
+
+```text
+$ .venv/bin/python -m pytest -q          -> 45 passed (30 existing + 15 new)
+$ .venv/bin/python -m ruff check .       -> All checks passed
+$ ./scripts/test-firmware.sh             -> 6 frame checks passed
+$ g++ -std=c++17 -Wall -Wextra -Werror ...  -> compiles clean
+```
+
+No board was flashed and no service was stopped.
