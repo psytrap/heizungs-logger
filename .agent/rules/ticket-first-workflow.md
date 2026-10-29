@@ -75,6 +75,6 @@ When dispatched to execute a ticket (or when synthesized by the coordinator):
 - **Rule:** Write in atomic units, one artefact per tool call, and keep chat narration to a single sentence per group.
 - **Enforcement:** See [`chunked-execution.md`](chunked-execution.md). Mandatory for models with a small `max_output_tokens` (the DeepSeek Flash profiles) and recommended for all others.
 
-## 6. 📅 Technology Reevaluation
-- **Rule:** Review the stack against current technology every 6 months; next due **2027-04-29**.
-- **Enforcement:** See [`technology-reevaluation.md`](technology-reevaluation.md). A review only files tickets, it never migrates anything itself.
+## 6. 📅 Output Limit Reevaluation
+- **Rule:** Re-check the agent model's output budget against current technology every 6 months; next due **2027-04-29**.
+- **Enforcement:** See [`output-limit-reevaluation.md`](output-limit-reevaluation.md). It is a settings change, not a ticket.
