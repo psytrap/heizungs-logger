@@ -21,7 +21,7 @@ Tickets are listed as one flat list, ordered by priority (**P0** → **High** �
 
 | Ticket | Title | Priority | Scope & Deliverables |
 | :---: | :--- | :---: | :--- |
-| [**T-001**](open/T-001-refactor-for-testability.md) | Behaviour-Preserving Refactor of the Logger for Testability | 🟠 **High** | Importable package, injectable hardware, pure parsing/rendering, pytest suite |
+| _none_ | – | – | – |
 
 ---
 
