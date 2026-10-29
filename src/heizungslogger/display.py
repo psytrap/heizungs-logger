@@ -9,10 +9,12 @@ LCD_COLUMNS = 16
 LCD_ROWS = 2
 
 #: Column positions shared by both rows.
-COLUMNS = (0, 6, 12)
-#: Field indices shown in row 0 / row 1, paired with ``COLUMNS``.
-ROW0_INDICES = (1, 2, 6)
-ROW1_INDICES = (3, 4, 7)
+COLUMNS = (0, 5, 10)
+#: Field indices shown in row 0 / row 1, paired with ``COLUMNS``. The deployed
+#: script shows the six temperatures of a v1b frame: ``data[1:4]`` on row 0 and
+#: ``data[4:7]`` on row 1.
+ROW0_INDICES = (1, 2, 3)
+ROW1_INDICES = (4, 5, 6)
 #: Backlight colour, applied once at startup by the legacy script.
 COLOR = (100, 0, 0)
 
