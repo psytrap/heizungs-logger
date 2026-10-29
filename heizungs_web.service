@@ -1,0 +1,32 @@
+[Unit]
+Description=Heizungslogger web view (read-only, last seven days)
+Documentation=file:///home/ubuntu/heizungs_logger/README.md
+After=network.target
+# Unbounded retries, like the logger: the page is useful even after a long outage.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ubuntu/heizungs_logger
+ExecStart=/usr/bin/python3 -m heizungslogger.web_server --log_directory /home/ubuntu/heizungs_logger_logs --port 80
+# The unit runs from the source tree, not from an installed package.
+Environment=PYTHONPATH=/home/ubuntu/heizungs_logger/src
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+User=ubuntu
+Group=ubuntu
+# Port 80 without running as root: one capability, nothing else.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+Restart=always
+RestartSec=5
+# Stricter than the logger: no devices, no writes anywhere, home read-only.
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=/home/ubuntu/heizungs_logger_logs
+
+[Install]
+WantedBy=multi-user.target

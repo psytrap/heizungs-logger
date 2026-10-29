@@ -79,3 +79,51 @@ Additional notes:
 journalctl -u heizungs_logger.service --since "1 hour ago" | grep -E "display|rejected frame|no meaningful frame"
 systemctl show heizungs_logger.service -p NRestarts
 ```
+
+---
+
+## 7. 🌐 Web view (read-only, seven days)
+
+`heizungs_web.service` serves one page with the last seven days from the same
+day files. It is a **separate unit** on purpose: a web fault cannot stop
+collection, either service can be restarted alone, and the web unit can be
+sandboxed far more tightly than the logger (no devices, read-only filesystem).
+
+```sh
+sudo scripts/install-web.sh --restart      # install / refresh and start
+sudo scripts/install-web.sh --dry-run      # preview
+sudo scripts/install-web.sh --uninstall
+```
+
+It listens on **`0.0.0.0:80`**, so the page is at `http://heizungs-logger/` from
+the LAN. Port 80 needs no root: the unit grants `CAP_NET_BIND_SERVICE` as its
+only capability.
+
+| Guarantee | How |
+| :--- | :--- |
+| Adds no dependency | `http.server` from the standard library only |
+| Never writes | `ProtectSystem=strict`, `ProtectHome=read-only`, `ReadOnlyPaths=` the log directory, `PYTHONDONTWRITEBYTECODE=1` |
+| No device access | `PrivateDevices=yes` |
+| Cannot disturb the logger | separate unit, separate process, no shared state |
+| No traffic to the internet | it only reads local files; no outbound requests |
+
+Behaviour worth knowing:
+
+- **Seven-day window.** The window is seven UTC days, because that is how the
+  files are named (`RECORDING.md` §3.2). Labels on the chart are local time, so
+  the left edge reads `02:00` rather than midnight; the day gridlines are at
+  local midnight and are uneven across a DST change by design.
+- **10-minute buckets.** Each bucket stores min/mean/max of about 30 samples, so
+  seven days is ~1 008 points per sensor and the page is under 200 KB.
+- **Pointer readout.** Hovering (or tapping) snaps to the nearest non-empty
+  bucket and shows time, mean, min and max. Without JavaScript the charts still
+  render, only the readout is missing.
+- **Reload.** `<meta http-equiv="refresh" content="600">`, so an open tab costs
+  six requests per hour. The server caches the built page and rebuilds it only
+  when a day file changes or 60 s have passed.
+- **Missing log directory** answers `503` with the path it tried, never a
+  traceback. `journalctl -u heizungs_web.service` shows only request lines.
+
+Not implemented, on purpose: authentication, TLS, and any exposure beyond the
+LAN. If that is ever needed, put a reverse proxy in front rather than growing
+this module.

@@ -59,6 +59,17 @@ sudo scripts/install-service.sh --restart
 See [`docs/OPERATIONS.md`](docs/OPERATIONS.md) for `--dry-run`, `--uninstall`,
 and the restart semantics.
 
+## View
+
+The last seven days are served read-only on the LAN by a second unit:
+
+```sh
+sudo scripts/install-web.sh --restart     # http://<pi>:80/
+```
+
+One page, six charts, a pointer readout, reload every 10 minutes, standard
+library only. See [`docs/OPERATIONS.md`](docs/OPERATIONS.md) §7.
+
 ## Layout
 
 | Path | Purpose |
@@ -69,5 +80,6 @@ and the restart semantics.
 | `heizungs_logger.ino` | Arduino firmware that samples the sensors |
 | `firmware/` | Host-testable frame formatter shared with the sketch |
 | `heizungs_logger.service` | systemd unit for the logger |
-| `scripts/` | `install-service.sh`, `test-firmware.sh` |
+| `heizungs_web.service` | systemd unit for the read-only seven-day web view |
+| `scripts/` | `install-service.sh`, `install-web.sh`, `test-firmware.sh` |
 | `docs/` | Specifications and operations notes |
