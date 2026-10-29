@@ -137,6 +137,7 @@ Design notes:
 - **`seq`** makes dropped samples and restarts detectable without a separate heartbeat record.
 - **Unknown fields are preserved** by writers, so a newer writer does not corrupt data for an older reader.
 - A **rejected frame produces no record.** Rejections are counted and logged to the journal, not into the data file.
+- A **rejection streak is bounded:** five minutes without an accepted frame ends the process so the service restarts with a fresh serial handle (see [`OPERATIONS.md`](OPERATIONS.md) §6). A streak therefore shows up as a gap in the day file plus a restart, never as a silently frozen logger.
 
 ### 4.1 Day metadata sidecar
 

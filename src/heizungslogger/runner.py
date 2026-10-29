@@ -24,8 +24,24 @@ CONVERSION_DELAY = 5.0
 SETTLE_DELAY = 0.1
 RATE = 20
 
+#: Seconds without an accepted frame after which the process asks for a restart.
+SILENCE_LIMIT = 300.0
+
 #: Command byte that asks the Arduino for a fresh conversion.
 REQUEST = b"x"
+
+
+class FrameTimeout(RuntimeError):
+    """No frame produced a record for ``seconds``.
+
+    Raised so the process can exit in a controlled way and let systemd recreate
+    the serial handle. Rejected frames alone are never fatal (T-006); a *streak*
+    of them is, because the port may be the part that needs replacing.
+    """
+
+    def __init__(self, seconds: float) -> None:
+        super().__init__(f"no meaningful frame for {seconds:.0f}s")
+        self.seconds = seconds
 
 
 class Runner:
@@ -41,6 +57,7 @@ class Runner:
         startup_delay: float = STARTUP_DELAY,
         conversion_delay: float = CONVERSION_DELAY,
         settle_delay: float = SETTLE_DELAY,
+        silence_limit: float = SILENCE_LIMIT,
         emit=print,
     ) -> None:
         self.link = link
@@ -51,7 +68,11 @@ class Runner:
         self.startup_delay = startup_delay
         self.conversion_delay = conversion_delay
         self.settle_delay = settle_delay
+        self.silence_limit = silence_limit
         self.emit = emit
+
+        #: When the last record was written; the silence timer runs from here.
+        self._last_good = clock.now()
 
         #: Frames dropped because they were empty or undecodable.
         self.rejected_frames = 0
@@ -81,7 +102,9 @@ class Runner:
         * an empty or undecodable frame is rejected: no record, one log line,
           cadence preserved (``docs/RECORDING.md`` §4);
         * a display fault is degraded mode: the record is already written by
-          then, the error is logged once and the handle is dropped.
+          then, the error is logged once and the handle is dropped;
+        * a rejected frame starts the silence timer without ending the process;
+          reaching ``silence_limit`` raises ``FrameTimeout`` (T-007).
         """
         self.link.reset_input_buffer()
         self.clock.sleep(self.settle_delay)
@@ -92,6 +115,7 @@ class Runner:
 
         if fields is None:
             self._wait_for(deadline)
+            self._check_silence()
             return []
 
         self.emit(fields)
@@ -99,8 +123,22 @@ class Runner:
 
         self.emit(local_label(deadline).isoformat())
         self.store.append(fields, deadline)
+        self._last_good = self.clock.now()
         self._show(fields)
         return fields
+
+    def _check_silence(self) -> None:
+        """Request a clean restart when no frame has produced a record for too long.
+
+        Only called after a rejected frame, so a healthy loop never consults the
+        timer. The elapsed time is measured from the last record, not from the
+        first rejection, so an intermittent fault never trips the limit.
+        """
+        elapsed = (self.clock.now() - self._last_good).total_seconds()
+        if elapsed < self.silence_limit:
+            return
+        self.emit(f"no meaningful frame for {elapsed:.0f}s; requesting a restart")
+        raise FrameTimeout(elapsed)
 
     def _wait_for(self, deadline: datetime.datetime) -> None:
         """Sleep until ``deadline``, never passing a negative duration to sleep."""

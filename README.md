@@ -46,7 +46,9 @@ heizungslogger --port /dev/ttyUSB0 --log_directory ./            # console scrip
 ```
 
 `--log_directory` defaults to the current directory. One record is appended
-per 20 seconds to `LOG-<local-date>.json`, one line per sample.
+per 20 seconds to `LOG-<local-date>.json`, one line per sample. If no frame is
+accepted for five minutes the process exits with status 1 so the service
+restarts with a fresh serial handle (see [`docs/OPERATIONS.md`](docs/OPERATIONS.md) §6).
 
 ## Deploy
 

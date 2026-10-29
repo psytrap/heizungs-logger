@@ -1,6 +1,7 @@
 import pytest
 
 from heizungslogger import cli
+from heizungslogger.runner import FrameTimeout
 
 
 def test_missing_port_prints_help_and_fails(capsys):
@@ -111,3 +112,33 @@ def test_link_is_closed_when_the_runner_raises(monkeypatch):
         cli.main(["--port", "/dev/ttyUSB0"])
 
     assert links[0].closed is True
+
+
+def test_silence_timeout_exits_cleanly(monkeypatch, capsys):
+    links = []
+
+    def make_link(port):
+        link = FakeLink(port)
+        links.append(link)
+        return link
+
+    class SilentRunner:
+        def __init__(self, *args):
+            pass
+
+        def run(self):
+            raise FrameTimeout(300.0)
+
+    monkeypatch.setattr(cli, "PyserialLink", make_link)
+    monkeypatch.setattr(cli, "Runner", SilentRunner)
+    monkeypatch.setattr(cli, "LcdDisplay", lambda: "display")
+
+    status = cli.main(["--port", "/dev/ttyUSB0"])
+
+    captured = capsys.readouterr()
+    assert status == 1
+    assert links[0].closed is True
+    assert captured.out == (
+        "no meaningful frame for 300s; exiting for a clean restart\n"
+    )
+    assert "Traceback" not in captured.out + captured.err

@@ -9,7 +9,7 @@ import argparse
 
 from heizungslogger.clock import SystemClock
 from heizungslogger.display import LcdDisplay
-from heizungslogger.runner import Runner
+from heizungslogger.runner import FrameTimeout, Runner
 from heizungslogger.serial_link import PyserialLink, list_ports
 from heizungslogger.store import FileStore
 
@@ -44,7 +44,12 @@ def main(argv: list[str] | None = None) -> int:
     link = PyserialLink(args.port)
     link.open()
     try:
-        Runner(link, LcdDisplay(), FileStore(log_directory), SystemClock()).run()
+        try:
+            Runner(link, LcdDisplay(), FileStore(log_directory), SystemClock()).run()
+        except FrameTimeout as exc:
+            # A frame streak, not a crash: exit so systemd reopens the port.
+            print(f"{exc}; exiting for a clean restart")
+            return 1
     finally:
         link.close()
     return 0

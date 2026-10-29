@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 
-from heizungslogger.runner import Runner
+from heizungslogger.runner import FrameTimeout, Runner
 
 MOMENT = datetime.datetime(2026, 10, 29, 12, 0, 0)
 LINE = b"0 21.5 35.0 40.1 22.0 18.4 61 55 12 0 a\r\n"
@@ -21,6 +21,14 @@ class FakeClock:
         self.sleeps.append(seconds)
         if self.interrupt_after is not None and len(self.sleeps) >= self.interrupt_after:
             raise KeyboardInterrupt
+
+
+class ManualClock(FakeClock):
+    """A clock that follows its own sleeps, so a cycle takes its real 20 s."""
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.moment += datetime.timedelta(seconds=seconds)
 
 
 class FakeLink:
@@ -257,3 +265,75 @@ def test_a_late_cycle_sleeps_zero_instead_of_raising():
     runner.sample(MOMENT - datetime.timedelta(seconds=5))
 
     assert clock.sleeps == [0.1, 5.0, 0.0]
+
+
+def bad_cycles(runner, clock, count):
+    for _ in range(count):
+        runner.sample(clock.now() + datetime.timedelta(seconds=20))
+
+
+def test_fifteen_rejected_cycles_request_a_restart():
+    clock = ManualClock()
+    runner, _clock, _link, _display, _store, _emitted = build_runner(
+        clock=clock, link=FakeLink(line=b"")
+    )
+
+    with pytest.raises(FrameTimeout) as excinfo:
+        bad_cycles(runner, clock, 20)
+
+    assert excinfo.value.seconds == pytest.approx(300.0)
+    assert len(clock.sleeps) == 45, "15 cycles, 3 sleeps each"
+
+
+def test_the_restart_request_is_logged_once_before_exiting():
+    clock = ManualClock()
+    runner, _clock, _link, _display, _store, emitted = build_runner(
+        clock=clock, link=FakeLink(line=b"")
+    )
+
+    with pytest.raises(FrameTimeout):
+        bad_cycles(runner, clock, 20)
+
+    messages = [item for item in emitted if "no meaningful frame" in str(item)]
+    assert len(messages) == 1
+    assert "300s" in messages[0]
+
+
+def test_the_silence_limit_is_configurable():
+    clock = ManualClock()
+    runner, _clock, _link, _display, _store, _emitted = build_runner(
+        clock=clock, link=FakeLink(line=b""), silence_limit=40.0
+    )
+
+    with pytest.raises(FrameTimeout) as excinfo:
+        bad_cycles(runner, clock, 5)
+
+    assert excinfo.value.seconds == pytest.approx(40.0)
+
+
+def test_a_good_frame_resets_the_silence_timer():
+    clock = ManualClock()
+    link = FakeLink(line=b"")
+    runner, _clock, _link, _display, _store, _emitted = build_runner(
+        clock=clock, link=link
+    )
+
+    bad_cycles(runner, clock, 14)
+    link.line = LINE
+    bad_cycles(runner, clock, 1)
+    link.line = b""
+    bad_cycles(runner, clock, 14)
+
+    with pytest.raises(FrameTimeout):
+        bad_cycles(runner, clock, 1)
+
+
+
+def test_run_does_not_swallow_the_silence_timeout():
+    clock = ManualClock()
+    runner, _clock, _link, _display, _store, _emitted = build_runner(
+        clock=clock, link=FakeLink(line=b"")
+    )
+
+    with pytest.raises(FrameTimeout):
+        runner.run()
