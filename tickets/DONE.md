@@ -11,7 +11,7 @@ This document is the historical register of all completed and verified tickets. 
 
 | Ticket | Title | Priority | Completed | Summary |
 | :---: | :--- | :---: | :---: | :--- |
-| _none_ | – | – | – | – |
+| [**T-002**](done/T-002-json-recording-strategy-documentation.md) | Document the JSON Recording Strategy | 🔵 **Normal** | 2026-10-29 | `docs/RECORDING.md`: measured inventory, two legacy format generations, UTC-label timestamp defect, v2 record proposal, reader contract, open decisions |
 
 ---
 
